@@ -6,31 +6,27 @@ const app = express();
 app.use(express.json());
 app.use(express.static('public')); // serve index.html
 
-// Robust website checker
+// Website/domain checker using AllOrigins proxy
 async function checkWebsite(url) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
-
   try {
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url;
+    if (!url.startsWith('http')) url = 'https://' + url;
+
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl);
+    const data = await response.json();
+
+    // If we get a valid response, the site is online
+    if (data && data.contents) {
+      return { online: true };
+    } else {
+      return { online: false, error: 'Empty response from proxy' };
     }
-
-    const response = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow',
-      signal: controller.signal
-    });
-
-    clearTimeout(timeout);
-    return { online: response.ok, status: response.status };
   } catch (err) {
-    clearTimeout(timeout);
     return { online: false, error: err.message };
   }
 }
 
-// Check server/IP with optional port
+// Server/IP checker with optional port
 function checkServer(host, port = 80, timeout = 2000) {
   return new Promise((resolve) => {
     const socket = new net.Socket();
@@ -42,7 +38,7 @@ function checkServer(host, port = 80, timeout = 2000) {
   });
 }
 
-// Determine if input is IP or domain, then check
+// API endpoint
 app.post('/check', async (req, res) => {
   const { input } = req.body;
   if (!input) return res.status(400).json({ error: 'No input provided' });
@@ -50,7 +46,7 @@ app.post('/check', async (req, res) => {
   const items = input.split(',').map(s => s.trim()).filter(Boolean);
 
   const results = await Promise.all(items.map(async (item) => {
-    // Check for IP with optional port
+    // Detect IP with optional port (e.g., 123.45.67.89:22)
     const ipPortMatch = item.match(/^(\d{1,3}(\.\d{1,3}){3})(:(\d{1,5}))?$/);
     if (ipPortMatch) {
       const host = ipPortMatch[1];
