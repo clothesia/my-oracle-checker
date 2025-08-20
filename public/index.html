@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Oracle of Servers</title>
+<style>
+  body { font-family: 'Courier New', monospace; background: radial-gradient(circle, #0f2027, #203a43, #2c5364); color: #ffffff; text-align: center; padding: 30px; }
+  h1 { font-size: 2.5em; margin-bottom: 10px; text-shadow: 2px 2px 8px #000; }
+  .prompt { font-style: italic; margin-bottom: 20px; color: #ffaa00; }
+  input, button { padding: 10px; margin: 10px; font-size: 1em; border: none; border-radius: 5px; }
+  input { width: 80%; max-width: 500px; }
+  button { background-color: #ff6f61; color: white; cursor: pointer; transition: 0.3s; }
+  button:hover { background-color: #ff3b2f; }
+  .status { margin-top: 20px; font-size: 1.2em; text-align: left; max-width: 600px; margin-left: auto; margin-right: auto; user-select: text; }
+  .online { color: #00ff00; }
+  .offline { color: #ff4444; }
+  .loading { color: #ffaa00; font-style: italic; }
+</style>
+</head>
+<body>
+
+<h1>The Oracle of Servers</h1>
+<div class="prompt" id="prompt">Welcome, seeker. Ask the Oracle for insight.</div>
+
+<p>Enter websites, domains, or IPs (with optional ports) separated by commas:</p>
+<input type="text" id="urls" placeholder="example.com, google.com, 123.45.67.89:22">
+<br>
+<button id="checkBtn">Check Status</button>
+<button id="autoBtn">Toggle Auto-Refresh (5s)</button>
+
+<div id="status" class="status"></div>
+
+<script>
+let autoRefresh = false;
+let autoInterval;
+
+const prompts = [
+  "The shadows know more than you realize...",
+  "A hidden path awaits the vigilant eye.",
+  "The Oracle whispers truths only once per day.",
+  "Stars align, revealing secrets to those who seek.",
+  "Even silence carries a message."
+];
+
+function updatePrompt() {
+  const index = Math.floor(Math.random() * prompts.length);
+  document.getElementById('prompt').textContent = prompts[index];
+}
+
+async function checkStatus() {
+  updatePrompt();
+  const input = document.getElementById('urls').value;
+  if (!input) return alert('Please enter at least one URL or IP.');
+
+  const statusDiv = document.getElementById('status');
+  statusDiv.innerHTML = '<div class="loading">Consulting the Oracle...</div>';
+
+  try {
+    const response = await fetch('/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input })
+    });
+    const results = await response.json();
+
+    statusDiv.innerHTML = results.map(r => {
+      if (r.online) return `<p class="online">${r.input} is online${r.status ? ' (Status: '+r.status+')' : ''}</p>`;
+      else return `<p class="offline">${r.input} is offline</p>`;
+    }).join('');
+  } catch (err) {
+    statusDiv.innerHTML = `<p class="offline">Error contacting Oracle: ${err.message}</p>`;
+  }
+}
+
+document.getElementById('checkBtn').addEventListener('click', checkStatus);
+document.getElementById('autoBtn').addEventListener('click', () => {
+  autoRefresh = !autoRefresh;
+  if (autoRefresh) {
+    autoInterval = setInterval(checkStatus, 5000);
+    alert('Auto-refresh ON (every 5 seconds)');
+  } else {
+    clearInterval(autoInterval);
+    alert('Auto-refresh OFF');
+  }
+});
+
+// Press Enter triggers check
+document.getElementById('urls').addEventListener('keydown', function(event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    document.getElementById('checkBtn').click();
+  }
+});
+
+// Save and load URLs
+function loadUrls() {
+  const saved = localStorage.getItem('savedWebsites');
+  if (saved) document.getElementById('urls').value = saved;
+}
+document.getElementById('urls').addEventListener('input', function() {
+  localStorage.setItem('savedWebsites', this.value);
+});
+
+loadUrls();
+</script>
+
+</body>
+</html>
