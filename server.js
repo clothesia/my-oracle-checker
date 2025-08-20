@@ -1,21 +1,36 @@
 const express = require('express');
 const net = require('net');
 const fetch = require('node-fetch');
+const dns = require('dns').promises;
 
 const app = express();
 app.use(express.json());
 app.use(express.static('public')); // serve index.html
 
-// Website/domain checker using AllOrigins proxy
+// Check if a domain resolves using DNS
+async function domainResolves(domain) {
+  try {
+    // Use Node's DNS resolver (system default, typically includes Google DNS)
+    const addresses = await dns.lookup(domain, { all: true, verbatim: true });
+    return addresses.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+// Website/domain checker using DNS pre-check + AllOrigins proxy
 async function checkWebsite(url) {
   try {
     if (!url.startsWith('http')) url = 'https://' + url;
+    const domain = (new URL(url)).hostname;
+
+    const resolves = await domainResolves(domain);
+    if (!resolves) return { online: false, error: 'DNS lookup failed' };
 
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
     const response = await fetch(proxyUrl);
     const data = await response.json();
 
-    // If we get a valid response, the site is online
     if (data && data.contents) {
       return { online: true };
     } else {
