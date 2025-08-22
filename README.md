@@ -58,11 +58,17 @@ You’ll see instant results:
 📂 Project Structure
 my-oracle-checker/
 ├── server.js        # Express backend (API & checks)
+
 ├── public/
+
 │   ├── index.html   # Main UI
+
 │   ├── script.js    # Frontend logic
+
 │   └── style.css    # Styling
+
 ├── package.json     # Node.js project config
+
 └── README.md        # This file
 
 🔧 Tech Stack
